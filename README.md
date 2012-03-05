@@ -1,6 +1,9 @@
 # UIExpandableTableView
 UIExpandableTableView is a UITableView subclass that gives you easy access to expandable and collapsable sections by just implementing a few more delegate and dataSource protocols.
 
+# Changes from original UIExpandableTableView
+Code was added to initWithCoder: that enabled normal UIExpandableTableView use when created from Interface Builder
+
 ## How to use UIExpandableTableView
 
 * Load the UIExpandableTableView in a UITableViewController
