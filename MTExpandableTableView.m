@@ -1,14 +1,14 @@
 //
-//  UIExpandableTableView.m
+//  MTExpandableTableView.m
 //  iGithub
 //
-//  Created by me on 11.04.11.
+//  Created by Oliver Letterer on 11.04.11.
 //  Copyright 2011 Home. All rights reserved.
 //
 
-#import "UIExpandableTableView.h"
+#import "MTExpandableTableView.h"
 
-@interface UIExpandableTableView ()
+@interface MTExpandableTableView ()
 
 @property (nonatomic, retain) NSMutableDictionary *expandableSectionsDictionary;
 @property (nonatomic, retain) NSMutableDictionary *showingSectionsDictionary;
@@ -25,11 +25,11 @@
 @end
 
 
-static UITableViewRowAnimation UIExpandableTableViewReloadAnimation = UITableViewRowAnimationFade;
+static UITableViewRowAnimation MTExpandableTableViewReloadAnimation = UITableViewRowAnimationFade;
 
 
 
-@implementation UIExpandableTableView
+@implementation MTExpandableTableView
 
 @synthesize expandableSectionsDictionary=_expandableSectionsDictionary, showingSectionsDictionary=_showingSectionsDictionary, animatingSectionsDictionary=_animatingSectionsDictionary, downloadingSectionsDictionary=_downloadingSectionsDictionary, myDelegate=_myDelegate, myDataSource=_myDataSource;
 @synthesize maximumRowCountToStillUseAnimationWhileExpanding=_maximumRowCountToStillUseAnimationWhileExpanding;
@@ -42,7 +42,7 @@ static UITableViewRowAnimation UIExpandableTableViewReloadAnimation = UITableVie
 	return [super delegate];
 }
 
-- (void)setDelegate:(id<UIExpandableTableViewDelegate>)delegate {
+- (void)setDelegate:(id<MTExpandableTableViewDelegate>)delegate {
 	_myDelegate = delegate;
 	[super setDelegate:self];
 }
@@ -51,7 +51,7 @@ static UITableViewRowAnimation UIExpandableTableViewReloadAnimation = UITableVie
 	return [super dataSource];
 }
 
-- (void)setDataSource:(id<UIExpandableTableViewDatasource>)dataSource {
+- (void)setDataSource:(id<MTExpandableTableViewDatasource>)dataSource {
 	_myDataSource = dataSource;
 	[super setDataSource:self];
 }
@@ -173,15 +173,15 @@ static UITableViewRowAnimation UIExpandableTableViewReloadAnimation = UITableVie
 	if (animated && newRowCount <= self.maximumRowCountToStillUseAnimationWhileExpanding) {
 		[self beginUpdates];
 		
-		UITableViewCell<UIExpandingTableViewCell> *cell = (UITableViewCell<UIExpandingTableViewCell> *)[self cellForRowAtIndexPath:[NSIndexPath indexPathForRow:0 inSection:section]];
-		[cell setExpansionStyle:UIExpansionStyleExpanded animated:YES];
+		UITableViewCell<MTExpandingTableViewCell> *cell = (UITableViewCell<MTExpandingTableViewCell> *)[self cellForRowAtIndexPath:[NSIndexPath indexPathForRow:0 inSection:section]];
+		[cell setExpansionStyle:MTExpansionStyleExpanded animated:YES];
 		
 		NSMutableArray *insertArray = [NSMutableArray array];
 		for (int i = 1; i < newRowCount; i++) {
 			[insertArray addObject:[NSIndexPath indexPathForRow:i inSection:section] ];
 		}
 		
-		[self insertRowsAtIndexPaths:insertArray withRowAnimation:UIExpandableTableViewReloadAnimation];
+		[self insertRowsAtIndexPaths:insertArray withRowAnimation:MTExpandableTableViewReloadAnimation];
 		
 		[self endUpdates];
 	} else {
@@ -225,15 +225,15 @@ static UITableViewRowAnimation UIExpandableTableViewReloadAnimation = UITableVie
 	if (animated && newRowCount <= self.maximumRowCountToStillUseAnimationWhileExpanding) {
 		[self beginUpdates];
 		
-		UITableViewCell<UIExpandingTableViewCell> *cell = (UITableViewCell<UIExpandingTableViewCell> *)[self cellForRowAtIndexPath:[NSIndexPath indexPathForRow:0 inSection:section]];
-		[cell setExpansionStyle:UIExpansionStyleCollapsed animated:YES];
+		UITableViewCell<MTExpandingTableViewCell> *cell = (UITableViewCell<MTExpandingTableViewCell> *)[self cellForRowAtIndexPath:[NSIndexPath indexPathForRow:0 inSection:section]];
+		[cell setExpansionStyle:MTExpansionStyleCollapsed animated:YES];
 		
 		NSMutableArray *deleteArray = [NSMutableArray array];
 		for (int i = 1; i < newRowCount; i++) {
 			[deleteArray addObject:[NSIndexPath indexPathForRow:i inSection:section] ];
 		}
 		
-		[self deleteRowsAtIndexPaths:deleteArray withRowAnimation:UIExpandableTableViewReloadAnimation];
+		[self deleteRowsAtIndexPaths:deleteArray withRowAnimation:MTExpandableTableViewReloadAnimation];
 		
 		[self endUpdates];
 	} else {
@@ -486,15 +486,15 @@ static UITableViewRowAnimation UIExpandableTableViewReloadAnimation = UITableVie
 	} else {
 		// cell is expandable
 		if (indexPath.row == 0) {
-			UITableViewCell<UIExpandingTableViewCell> *cell = [self.myDataSource tableView:self expandingCellForSection:indexPath.section];
+			UITableViewCell<MTExpandingTableViewCell> *cell = [self.myDataSource tableView:self expandingCellForSection:indexPath.section];
 			if ([[self.downloadingSectionsDictionary objectForKey:key] boolValue]) {
 				[cell setLoading:YES];
 			} else {
 				[cell setLoading:NO];
 				if ([[self.showingSectionsDictionary objectForKey:key] boolValue]) {
-					[cell setExpansionStyle:UIExpansionStyleExpanded animated:NO];
+					[cell setExpansionStyle:MTExpansionStyleExpanded animated:NO];
 				} else {
-					[cell setExpansionStyle:UIExpansionStyleCollapsed animated:NO];
+					[cell setExpansionStyle:MTExpansionStyleCollapsed animated:NO];
 				}
 			}
 			return cell;
