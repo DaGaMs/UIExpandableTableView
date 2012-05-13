@@ -75,15 +75,15 @@
     [self setSpinning:loading];
 }
 
-- (void)setExpansionStyle:(UIExpansionStyle)style animated:(BOOL)animated
+- (void)setExpansionStyle:(MTExpansionStyle)style animated:(BOOL)animated
 {
     void(^animationBlock)(void) = ^(void) {
         self.accessoryView = self.disclosureIndicatorImageView;
         switch (style) {
-            case UIExpansionStyleExpanded:
+            case MTExpansionStyleExpanded:
                 self.accessoryView.transform = CGAffineTransformIdentity;
                 break;
-            case UIExpansionStyleCollapsed:
+            case MTExpansionStyleCollapsed:
                 self.accessoryView.transform = CGAffineTransformMakeRotation(M_PI);
                 break;
                 

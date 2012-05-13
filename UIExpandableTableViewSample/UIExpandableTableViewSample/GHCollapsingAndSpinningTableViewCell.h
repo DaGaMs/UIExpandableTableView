@@ -7,9 +7,9 @@
 //
 
 #import <UIKit/UIKit.h>
-#import "UIExpandableTableView.h"
+#import "MTExpandableTableView.h"
 
-@interface GHCollapsingAndSpinningTableViewCell : UITableViewCell <UIExpandingTableViewCell> {
+@interface GHCollapsingAndSpinningTableViewCell : UITableViewCell <MTExpandingTableViewCell> {
 @private
     BOOL _isSpinning;
     

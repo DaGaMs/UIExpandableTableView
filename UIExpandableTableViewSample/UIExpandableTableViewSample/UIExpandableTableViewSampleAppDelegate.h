@@ -1,6 +1,6 @@
 //
-//  UIExpandableTableViewSampleAppDelegate.h
-//  UIExpandableTableViewSample
+//  MTExpandableTableViewSampleAppDelegate.h
+//  MTExpandableTableViewSample
 //
 //  Created by me on 27.07.11.
 //  Copyright 2011 Home. All rights reserved.

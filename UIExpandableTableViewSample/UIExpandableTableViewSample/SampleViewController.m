@@ -1,13 +1,13 @@
 //
 //  SampleViewController.m
-//  UIExpandableTableViewSample
+//  MTExpandableTableViewSample
 //
 //  Created by me on 27.07.11.
 //  Copyright 2011 Home. All rights reserved.
 //
 
 #import "SampleViewController.h"
-#import "UIExpandableTableView.h"
+#import "MTExpandableTableView.h"
 #import "GHCollapsingAndSpinningTableViewCell.h"
 
 #define kUITableExpandableSection       1
@@ -17,7 +17,7 @@
 #pragma mark - View lifecycle
 
 - (void)loadView {
-    self.tableView = [[UIExpandableTableView alloc] initWithFrame:CGRectMake(0.0f, 0.0f, 320.0f, 480.0f) style:UITableViewStylePlain];
+    self.tableView = [[MTExpandableTableView alloc] initWithFrame:CGRectMake(0.0f, 0.0f, 320.0f, 480.0f) style:UITableViewStylePlain];
 }
 
 - (BOOL)shouldAutorotateToInterfaceOrientation:(UIInterfaceOrientation)interfaceOrientation {
@@ -25,19 +25,19 @@
     return (interfaceOrientation == UIInterfaceOrientationPortrait);
 }
 
-#pragma mark - UIExpandableTableViewDatasource
+#pragma mark - MTExpandableTableViewDatasource
 
-- (BOOL)tableView:(UIExpandableTableView *)tableView canExpandSection:(NSInteger)section {
+- (BOOL)tableView:(MTExpandableTableView *)tableView canExpandSection:(NSInteger)section {
     // return YES, if the section should be expandable
     return section == kUITableExpandableSection;
 }
 
-- (BOOL)tableView:(UIExpandableTableView *)tableView needsToDownloadDataForExpandableSection:(NSInteger)section {
+- (BOOL)tableView:(MTExpandableTableView *)tableView needsToDownloadDataForExpandableSection:(NSInteger)section {
     // return YES, if you need to download data to expand this section. tableView will call tableView:downloadDataForExpandableSection: for this section
     return !_didDownloadData;
 }
 
-- (UITableViewCell<UIExpandingTableViewCell> *)tableView:(UIExpandableTableView *)tableView expandingCellForSection:(NSInteger)section {
+- (UITableViewCell<MTExpandingTableViewCell> *)tableView:(MTExpandableTableView *)tableView expandingCellForSection:(NSInteger)section {
     NSString *CellIdientifier = @"GHCollapsingAndSpinningTableViewCell";
     
     GHCollapsingAndSpinningTableViewCell *cell = (GHCollapsingAndSpinningTableViewCell *)[tableView dequeueReusableCellWithIdentifier:CellIdientifier];
@@ -53,9 +53,9 @@
     return cell;
 }
 
-#pragma mark - UIExpandableTableViewDelegate
+#pragma mark - MTExpandableTableViewDelegate
 
-- (void)tableView:(UIExpandableTableView *)tableView downloadDataForExpandableSection:(NSInteger)section {
+- (void)tableView:(MTExpandableTableView *)tableView downloadDataForExpandableSection:(NSInteger)section {
     // download your data here
     double delayInSeconds = 2.0;
     dispatch_time_t popTime = dispatch_time(DISPATCH_TIME_NOW, delayInSeconds * NSEC_PER_SEC);

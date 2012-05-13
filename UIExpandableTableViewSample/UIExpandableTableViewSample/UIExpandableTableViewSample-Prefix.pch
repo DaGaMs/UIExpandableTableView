@@ -1,5 +1,5 @@
 //
-// Prefix header for all source files of the 'UIExpandableTableViewSample' target in the 'UIExpandableTableViewSample' project
+// Prefix header for all source files of the 'MTExpandableTableViewSample' target in the 'MTExpandableTableViewSample' project
 //
 
 #import <Availability.h>
