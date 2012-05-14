@@ -171,6 +171,9 @@ static UITableViewRowAnimation MTExpandableTableViewReloadAnimation = UITableVie
 	
 	NSInteger newRowCount = [self.myDataSource tableView:self numberOfRowsInSection:section];
 	// now do the animation magic to insert the new cells
+    if ([self.myDelegate respondsToSelector:@selector(tableView:willExpandSection:)])
+		[self.myDelegate tableView:self willExpandSection:section];
+
 	if (animated && newRowCount <= self.maximumRowCountToStillUseAnimationWhileExpanding) {
 		[self beginUpdates];
 		
@@ -201,9 +204,14 @@ static UITableViewRowAnimation MTExpandableTableViewReloadAnimation = UITableVie
 	};
 	
 	if (animated) {
-		[UIView animateWithDuration:self.animationDuration animations:animationBlock];
+		[UIView animateWithDuration:self.animationDuration animations:animationBlock completion:^(BOOL finished) {
+            if ([self.myDelegate respondsToSelector:@selector(tableView:didExpandSection:)])
+                [self.myDelegate tableView:self didExpandSection:section];
+        }];
 	} else {
 		animationBlock();
+        if ([self.myDelegate respondsToSelector:@selector(tableView:didExpandSection:)])
+            [self.myDelegate tableView:self didExpandSection:section];
 	}
 }
 
@@ -223,6 +231,8 @@ static UITableViewRowAnimation MTExpandableTableViewReloadAnimation = UITableVie
 	
 	NSInteger newRowCount = [self.myDataSource tableView:self numberOfRowsInSection:section];
 	// now do the animation magic to delete the new cells
+    if ([self.myDelegate respondsToSelector:@selector(tableView:willCollapseSection:)])
+        [self.myDelegate tableView:self willCollapseSection:section];
 	if (animated && newRowCount <= self.maximumRowCountToStillUseAnimationWhileExpanding) {
 		[self beginUpdates];
 		
@@ -253,9 +263,14 @@ static UITableViewRowAnimation MTExpandableTableViewReloadAnimation = UITableVie
 	};
 	
 	if (animated) {
-		[UIView animateWithDuration:self.animationDuration animations:animationBlock];
+		[UIView animateWithDuration:self.animationDuration animations:animationBlock completion:^(BOOL finished) {
+            if ([self.myDelegate respondsToSelector:@selector(tableView:didCollapseSection:)])
+                [self.myDelegate tableView:self didCollapseSection:section];
+        }];
 	} else {
 		animationBlock();
+        if ([self.myDelegate respondsToSelector:@selector(tableView:didCollapseSection:)])
+            [self.myDelegate tableView:self didCollapseSection:section];
 	}
 }
 

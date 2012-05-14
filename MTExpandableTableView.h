@@ -42,7 +42,10 @@ typedef enum {
 
 @optional
 - (void)tableView:(MTExpandableTableView *)tableView willDisplayCell:(UITableViewCell *)cell forRowAtIndexPathWhileAnimatingSection:(NSIndexPath *)indexPath;
-
+- (void)tableView:(MTExpandableTableView *)tableView willExpandSection:(NSInteger)section;
+- (void)tableView:(MTExpandableTableView *)tableView didExpandSection:(NSInteger)section;
+- (void)tableView:(MTExpandableTableView *)tableView willCollapseSection:(NSInteger)section;
+- (void)tableView:(MTExpandableTableView *)tableView didCollapseSection:(NSInteger)section;
 @end
 
 
