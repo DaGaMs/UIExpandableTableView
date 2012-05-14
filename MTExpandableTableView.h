@@ -94,7 +94,7 @@ typedef enum {
 @property (nonatomic, readonly, MTExpandableTableView_weak) id<MTExpandableTableViewDatasource> myDataSource;
 
 @property (nonatomic, assign) NSInteger maximumRowCountToStillUseAnimationWhileExpanding;
-
+@property (nonatomic, assign) CGFloat animationDuration; // defaults to 0.25f
 @property (nonatomic, assign) BOOL onlyDisplayHeaderAndFooterViewIfTableViewIsNotEmpty;
 
 // call tableView:needsToDownloadDataForExpandableSection: to make sure we can expand the section, otherwise through exception

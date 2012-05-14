@@ -35,7 +35,7 @@ static UITableViewRowAnimation MTExpandableTableViewReloadAnimation = UITableVie
 @synthesize maximumRowCountToStillUseAnimationWhileExpanding=_maximumRowCountToStillUseAnimationWhileExpanding;
 @synthesize onlyDisplayHeaderAndFooterViewIfTableViewIsNotEmpty=_onlyDisplayHeaderAndFooterViewIfTableViewIsNotEmpty;
 @synthesize storedTableHeaderView=_storedTableHeaderView, storedTableFooterView=_storedTableFooterView;
-
+@synthesize animationDuration = _animationDuration;
 #pragma mark - setters and getters
 
 - (id<UITableViewDelegate>)delegate {
@@ -88,6 +88,7 @@ static UITableViewRowAnimation MTExpandableTableViewReloadAnimation = UITableVie
 		self.showingSectionsDictionary = [NSMutableDictionary dictionary];
 		self.downloadingSectionsDictionary = [NSMutableDictionary dictionary];
 		self.animatingSectionsDictionary = [NSMutableDictionary dictionary];
+        self.animationDuration = 0.25f;
 	}
 	return self;
 }
@@ -200,7 +201,7 @@ static UITableViewRowAnimation MTExpandableTableViewReloadAnimation = UITableVie
 	};
 	
 	if (animated) {
-		[UIView animateWithDuration:0.25f animations:animationBlock];
+		[UIView animateWithDuration:self.animationDuration animations:animationBlock];
 	} else {
 		animationBlock();
 	}
@@ -252,7 +253,7 @@ static UITableViewRowAnimation MTExpandableTableViewReloadAnimation = UITableVie
 	};
 	
 	if (animated) {
-		[UIView animateWithDuration:0.25f animations:animationBlock];
+		[UIView animateWithDuration:self.animationDuration animations:animationBlock];
 	} else {
 		animationBlock();
 	}
