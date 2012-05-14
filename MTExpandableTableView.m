@@ -109,7 +109,7 @@ static UITableViewRowAnimation MTExpandableTableViewReloadAnimation = UITableVie
 
 #pragma mark - instance methods
 
-- (BOOL)canExpandSection:(NSUInteger)section {
+- (BOOL)canExpandSection:(NSInteger)section {
 	return [[self.expandableSectionsDictionary objectForKey:[NSNumber numberWithInt:section] ] boolValue];
 }
 
@@ -258,6 +258,24 @@ static UITableViewRowAnimation MTExpandableTableViewReloadAnimation = UITableVie
 	}
 }
 
+- (void)toggleSection:(NSInteger)section {
+    NSNumber *key = [NSNumber numberWithInteger:section];
+	if ([[self.expandableSectionsDictionary objectForKey:key] boolValue]) {
+    // section is expandable
+        // expand cell got clicked
+        if ([self.myDataSource tableView:self needsToDownloadDataForExpandableSection:section]) {
+            // we need to download some data first
+            [self downloadDataInSection:section];
+        } else {
+            if ([[self.showingSectionsDictionary objectForKey:key] boolValue]) {
+                [self collapseSection:section animated:YES];
+            } else {
+                [self expandSection:section animated:YES];
+            }
+        }
+    }
+}
+
 - (BOOL)isSectionExpanded:(NSInteger)section {
 	NSNumber *key = [NSNumber numberWithInteger:section];
 	return [[self.showingSectionsDictionary objectForKey:key] boolValue];
@@ -348,31 +366,9 @@ static UITableViewRowAnimation MTExpandableTableViewReloadAnimation = UITableVie
 }
 // Called after the user changes the selection.
 - (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath {
-	NSNumber *key = [NSNumber numberWithInteger:indexPath.section];
-	if ([[self.expandableSectionsDictionary objectForKey:key] boolValue]) {
-		// section is expandable
-		if (indexPath.row == 0) {
-			// expand cell got clicked
-			if ([self.myDataSource tableView:self needsToDownloadDataForExpandableSection:indexPath.section]) {
-				// we need to download some data first
-				[self downloadDataInSection:indexPath.section];
-			} else {
-				if ([[self.showingSectionsDictionary objectForKey:key] boolValue]) {
-					[self collapseSection:indexPath.section animated:YES];
-				} else {
-					[self expandSection:indexPath.section animated:YES];
-				}
-			}
-		} else {
-			if ([self.myDelegate respondsToSelector:@selector(tableView:didSelectRowAtIndexPath:)]) {
-				[self.myDelegate tableView:tableView didSelectRowAtIndexPath:[NSIndexPath indexPathForRow:indexPath.row inSection:indexPath.section] ];
-			}
-		}
-	} else {
-		if ([self.myDelegate respondsToSelector:@selector(tableView:didSelectRowAtIndexPath:)]) {
-			[self.myDelegate tableView:tableView didSelectRowAtIndexPath:indexPath];
-		}
-	}
+    if ([self.myDelegate respondsToSelector:@selector(tableView:didSelectRowAtIndexPath:)]) {
+        [self.myDelegate tableView:tableView didSelectRowAtIndexPath:indexPath];
+    }
 }
 
 - (void)tableView:(UITableView *)tableView didDeselectRowAtIndexPath:(NSIndexPath *)indexPath {

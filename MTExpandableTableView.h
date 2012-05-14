@@ -102,8 +102,9 @@ typedef enum {
 - (void)collapseSection:(NSInteger)section animated:(BOOL)animated;
 - (void)cancelDownloadInSection:(NSInteger)section;
 - (void)reloadDataAndResetExpansionStates:(BOOL)resetFlag;
+- (void)toggleSection:(NSInteger)section;
 
-- (BOOL)canExpandSection:(NSUInteger)section;
+- (BOOL)canExpandSection:(NSInteger)section;
 - (BOOL)isSectionExpanded:(NSInteger)section;
 
 @end
