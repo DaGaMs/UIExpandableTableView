@@ -31,6 +31,12 @@ typedef enum {
 - (BOOL)tableView:(MTExpandableTableView *)tableView needsToDownloadDataForExpandableSection:(NSInteger)section;
 - (UITableViewCell<MTExpandingTableViewCell> *)tableView:(MTExpandableTableView *)tableView expandingCellForSection:(NSInteger)section;
 
+@optional
+/** If the datasource implements this method, reloadDataAndResetExpansionStates:
+  * will reset the section expansion accordingly. This is useful for swapping the
+  * tableView organisation on the fly without the user noticing.
+  */
+- (BOOL)tableView:(MTExpandableTableView *)tableView expandSection:(NSInteger)section;
 @end
 
 
@@ -97,16 +103,19 @@ typedef enum {
 @property (nonatomic, readonly, MTExpandableTableView_weak) id<MTExpandableTableViewDatasource> myDataSource;
 
 @property (nonatomic, assign) NSInteger maximumRowCountToStillUseAnimationWhileExpanding;
-@property (nonatomic, assign) CGFloat animationDuration; // defaults to 0.25f
+/// This only controls duration of scrollView animation during row expansion/collapse.
+/// Default is 0.25s.
+@property (nonatomic, assign) CGFloat animationDuration;
 @property (nonatomic, assign) BOOL onlyDisplayHeaderAndFooterViewIfTableViewIsNotEmpty;
 
 // call tableView:needsToDownloadDataForExpandableSection: to make sure we can expand the section, otherwise through exception
 - (void)expandSection:(NSInteger)section animated:(BOOL)animated;
 - (void)collapseSection:(NSInteger)section animated:(BOOL)animated;
 - (void)cancelDownloadInSection:(NSInteger)section;
-- (void)reloadDataAndResetExpansionStates:(BOOL)resetFlag;
 - (void)toggleSection:(NSInteger)section;
-
+/// Reset cached expansion and expandable states and reload from datasource.
+/// @warning You need to call reloadData manually for these changes to take effect!
+- (void)resetExpansionStates;
 - (BOOL)canExpandSection:(NSInteger)section;
 - (BOOL)isSectionExpanded:(NSInteger)section;
 

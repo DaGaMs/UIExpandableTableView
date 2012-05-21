@@ -19,15 +19,17 @@
 @property (nonatomic, retain) UIView *storedTableFooterView;
 
 - (void)downloadDataInSection:(NSInteger)section;
-
-- (void)_resetExpansionStates;
-
+- (BOOL)isSectionAnimating:(NSInteger)section;
+- (BOOL)isSectionDownloading:(NSInteger)section;
+- (void)setSection:(NSInteger)section expandable:(BOOL)yesno;
+- (void)setSection:(NSInteger)section expanded:(BOOL)yesno;
+- (void)setSection:(NSInteger)section downloading:(BOOL)yesno;
+- (void)setSection:(NSInteger)section animating:(BOOL)yesno;
 @end
 
 
 static UITableViewRowAnimation MTExpandableTableViewReloadAnimation = UITableViewRowAnimationFade;
-
-
+static NSTimeInterval MTExpandableTableViewRowAnimationWait = 0.4;
 
 @implementation MTExpandableTableView
 
@@ -60,6 +62,7 @@ static UITableViewRowAnimation MTExpandableTableViewReloadAnimation = UITableVie
 	if (tableFooterView != _storedTableFooterView) {
 		[super setTableFooterView:nil];
 		_storedTableFooterView = tableFooterView;
+        [self resetExpansionStates];
 		[self reloadData];
 	}
 }
@@ -68,6 +71,7 @@ static UITableViewRowAnimation MTExpandableTableViewReloadAnimation = UITableVie
 	if (tableHeaderView != _storedTableHeaderView) {
 		[super setTableHeaderView:nil];
 		_storedTableHeaderView = tableHeaderView;
+        [self resetExpansionStates];
 		[self reloadData];
 	}
 }
@@ -75,8 +79,58 @@ static UITableViewRowAnimation MTExpandableTableViewReloadAnimation = UITableVie
 - (void)setOnlyDisplayHeaderAndFooterViewIfTableViewIsNotEmpty:(BOOL)onlyDisplayHeaderAndFooterViewIfTableViewIsNotEmpty {
 	if (_onlyDisplayHeaderAndFooterViewIfTableViewIsNotEmpty != onlyDisplayHeaderAndFooterViewIfTableViewIsNotEmpty) {
 		_onlyDisplayHeaderAndFooterViewIfTableViewIsNotEmpty = onlyDisplayHeaderAndFooterViewIfTableViewIsNotEmpty;
+        [self resetExpansionStates];
 		[self reloadData];
 	}
+}
+
+- (BOOL)canExpandSection:(NSInteger)section {
+//    return [self.myDataSource tableView:self canExpandSection:section];
+	return [[self.expandableSectionsDictionary objectForKey:[NSNumber numberWithInt:section] ] boolValue];
+}
+
+- (BOOL)isSectionExpanded:(NSInteger)section {
+    NSNumber *key = [NSNumber numberWithInteger:section];
+    NSNumber *yesno = [_showingSectionsDictionary objectForKey:key];
+    return (yesno != nil)?[yesno boolValue]:NO;    
+}
+
+- (BOOL)isSectionAnimating:(NSInteger)section
+{
+    NSNumber *key = [NSNumber numberWithInteger:section];
+    NSNumber *yesno = [_animatingSectionsDictionary objectForKey:key];
+    return (yesno != nil)?[yesno boolValue]:NO;    
+}
+
+- (BOOL)isSectionDownloading:(NSInteger)section
+{
+    NSNumber *key = [NSNumber numberWithInteger:section];
+    NSNumber *yesno = [_downloadingSectionsDictionary objectForKey:key];
+    return (yesno != nil)?[yesno boolValue]:NO;
+}
+
+- (void)setSection:(NSInteger)section expandable:(BOOL)yesno
+{
+    NSNumber *key = [NSNumber numberWithInteger:section];
+    [_expandableSectionsDictionary setObject:[NSNumber numberWithBool:yesno] forKey:key];
+}
+
+- (void)setSection:(NSInteger)section expanded:(BOOL)yesno
+{
+    NSNumber *key = [NSNumber numberWithInteger:section];
+    [_showingSectionsDictionary setObject:[NSNumber numberWithBool:yesno] forKey:key];
+}
+
+- (void)setSection:(NSInteger)section downloading:(BOOL)yesno
+{
+    NSNumber *key = [NSNumber numberWithInteger:section];
+    [_downloadingSectionsDictionary setObject:[NSNumber numberWithBool:yesno] forKey:key];
+}
+
+- (void)setSection:(NSInteger)section animating:(BOOL)yesno
+{
+    NSNumber *key = [NSNumber numberWithInteger:section];
+    [_animatingSectionsDictionary setObject:[NSNumber numberWithBool:yesno] forKey:key];
 }
 
 #pragma mark - Initialization
@@ -95,14 +149,8 @@ static UITableViewRowAnimation MTExpandableTableViewReloadAnimation = UITableVie
 
 #pragma mark - private methods
 
-- (void)_resetExpansionStates {
-	[self.expandableSectionsDictionary removeAllObjects];
-	[self.showingSectionsDictionary removeAllObjects];
-	[self.downloadingSectionsDictionary removeAllObjects];
-}
-
 - (void)downloadDataInSection:(NSInteger)section {
-	[self.downloadingSectionsDictionary setObject:[NSNumber numberWithBool:YES] forKey:[NSNumber numberWithInteger:section] ];
+    [self setSection:section downloading:YES];
 	[self.myDelegate tableView:self downloadDataForExpandableSection:section];
 	[self reloadRowsAtIndexPaths:[NSArray arrayWithObject:[NSIndexPath indexPathForRow:0 inSection:section] ] 
 				withRowAnimation:UITableViewRowAnimationNone];
@@ -110,16 +158,178 @@ static UITableViewRowAnimation MTExpandableTableViewReloadAnimation = UITableVie
 
 #pragma mark - instance methods
 
-- (BOOL)canExpandSection:(NSInteger)section {
-	return [[self.expandableSectionsDictionary objectForKey:[NSNumber numberWithInt:section] ] boolValue];
+- (void)cancelDownloadInSection:(NSInteger)section {
+    [self setSection:section downloading:NO];
+	[self reloadRowsAtIndexPaths:[NSArray arrayWithObject:[NSIndexPath indexPathForRow:0 inSection:section] ] 
+				withRowAnimation:UITableViewRowAnimationNone];
 }
 
-- (void)reloadDataAndResetExpansionStates:(BOOL)resetFlag {
-	if (resetFlag) {
-		[self _resetExpansionStates];
+- (void)expandSection:(NSInteger)section animated:(BOOL)animated {
+	if ([self isSectionExpanded:section]) {
+		// section is already showing, return
+		return;
 	}
 	
-	if (self.onlyDisplayHeaderAndFooterViewIfTableViewIsNotEmpty) {
+	if ([self.myDataSource tableView:self needsToDownloadDataForExpandableSection:section]) {
+		// data is still not ready to be displayed, return
+		[self downloadDataInSection:section];
+		return;
+	}
+    if ([self.myDelegate respondsToSelector:@selector(tableView:willExpandSection:)])
+		[self.myDelegate tableView:self willExpandSection:section];
+
+	[self setSection:section animating:YES];
+	
+	// remove the download state
+	[self setSection:section downloading:NO];
+    
+    [self setSection:section expanded:YES];
+    
+	NSInteger newRowCount = [self.myDataSource tableView:self numberOfRowsInSection:section];
+
+	// now do the animation magic to insert the new cells
+	if (animated && newRowCount <= self.maximumRowCountToStillUseAnimationWhileExpanding) {
+		[self beginUpdates];
+		
+		UITableViewCell<MTExpandingTableViewCell> *cell = (UITableViewCell<MTExpandingTableViewCell> *)[self cellForRowAtIndexPath:[NSIndexPath indexPathForRow:0 inSection:section]];
+		[cell setExpansionStyle:MTExpansionStyleExpanded animated:YES];
+		
+		NSMutableArray *insertArray = [NSMutableArray array];
+		for (int i = 1; i < newRowCount; i++) {
+			[insertArray addObject:[NSIndexPath indexPathForRow:i inSection:section] ];
+		}
+		
+		[self insertRowsAtIndexPaths:insertArray withRowAnimation:MTExpandableTableViewReloadAnimation];
+		
+		[self endUpdates];
+	} else {
+		[self reloadData];
+	}
+	
+    [self setSection:section animating:NO];
+	
+	[self scrollToRowAtIndexPath:[NSIndexPath indexPathForRow:0 inSection:section] 
+				atScrollPosition:UITableViewScrollPositionTop 
+						animated:animated];
+	
+	// inform that we did scroll
+	void(^animationBlock)(void) = ^(void) {
+		[self scrollViewDidScroll:self];
+	};
+	
+    [UIView animateWithDuration:animated?self.animationDuration:0.f 
+                     animations:animationBlock 
+                     completion:^(BOOL finished) {
+    }];
+    
+    dispatch_time_t popTime = dispatch_time(DISPATCH_TIME_NOW, MTExpandableTableViewRowAnimationWait * NSEC_PER_SEC);
+    dispatch_after(popTime, dispatch_get_main_queue(), ^(void){
+        if ([self.myDelegate respondsToSelector:@selector(tableView:didExpandSection:)])
+            [self.myDelegate tableView:self didExpandSection:section];
+    });
+}
+
+- (void)collapseSection:(NSInteger)section animated:(BOOL)animated {
+	if (![self isSectionExpanded:section]) {
+		// section is not showing, return
+		return;
+	}
+    
+    if ([self.myDelegate respondsToSelector:@selector(tableView:willCollapseSection:)])
+        [self.myDelegate tableView:self willCollapseSection:section];
+    
+    [self setSection:section animating:YES];
+    [self setSection:section expanded:NO];
+    
+
+	NSInteger newRowCount = [self.myDataSource tableView:self numberOfRowsInSection:section];
+
+	// now do the animation magic to delete the new cells
+	if (animated && newRowCount <= self.maximumRowCountToStillUseAnimationWhileExpanding) {
+		[self beginUpdates];
+		
+		UITableViewCell<MTExpandingTableViewCell> *cell = (UITableViewCell<MTExpandingTableViewCell> *)[self cellForRowAtIndexPath:[NSIndexPath indexPathForRow:0 inSection:section]];
+		[cell setExpansionStyle:MTExpansionStyleCollapsed animated:YES];
+		
+		NSMutableArray *deleteArray = [NSMutableArray array];
+		for (int i = 1; i < newRowCount; i++) {
+			[deleteArray addObject:[NSIndexPath indexPathForRow:i inSection:section] ];
+		}
+		
+		[self deleteRowsAtIndexPaths:deleteArray withRowAnimation:MTExpandableTableViewReloadAnimation];
+		
+		[self endUpdates];
+	} else {
+		[self reloadData];
+	}
+	
+    [self setSection:section animating:NO];
+	
+	[self scrollToRowAtIndexPath:[NSIndexPath indexPathForRow:0 inSection:section] 
+				atScrollPosition:UITableViewScrollPositionTop 
+						animated:animated];
+	
+	// inform that we did scroll
+	void(^animationBlock)(void) = ^(void) {
+		[self scrollViewDidScroll:self];
+	};
+	
+    [UIView animateWithDuration:animated?self.animationDuration:0.f 
+                     animations:animationBlock 
+                     completion:^(BOOL finished) {
+    }];
+    
+    dispatch_time_t popTime = dispatch_time(DISPATCH_TIME_NOW, MTExpandableTableViewRowAnimationWait * NSEC_PER_SEC);
+    dispatch_after(popTime, dispatch_get_main_queue(), ^(void){
+        if ([self.myDelegate respondsToSelector:@selector(tableView:didCollapseSection:)])
+            [self.myDelegate tableView:self didCollapseSection:section];
+    });
+}
+
+- (void)toggleSection:(NSInteger)section {
+	if ([self canExpandSection:section]) {
+    // section is expandable
+        // expand cell got clicked
+        if ([self.myDataSource tableView:self needsToDownloadDataForExpandableSection:section]) {
+            // we need to download some data first
+            [self downloadDataInSection:section];
+        } else {
+            if ([self isSectionExpanded:section]) {
+                [self collapseSection:section animated:YES];
+            } else {
+                [self expandSection:section animated:YES];
+            }
+        }
+    }
+}
+
+- (void)resetExpansionStates {
+	[self.expandableSectionsDictionary removeAllObjects];
+	[self.showingSectionsDictionary removeAllObjects];
+	[self.downloadingSectionsDictionary removeAllObjects];
+    
+    NSInteger numberOfSections = [self.myDataSource numberOfSectionsInTableView:self];
+    
+    for (NSInteger i=0; i < numberOfSections; i++)
+    {
+        if ([self.myDataSource tableView:self canExpandSection:i])
+        {
+            [self setSection:i expandable:YES];
+            [self setSection:i downloading:[self.myDataSource tableView:self needsToDownloadDataForExpandableSection:i]];
+            if ([self.myDataSource respondsToSelector:@selector(tableView:expandSection:)])
+                [self setSection:i expanded:[self.myDataSource tableView:self expandSection:i]];
+        }
+        else
+        {
+            [self setSection:i expandable:NO];
+        }
+    }
+}
+
+#pragma mark - super implementation
+
+- (void)reloadData {
+    if (self.onlyDisplayHeaderAndFooterViewIfTableViewIsNotEmpty) {
 		if ([self numberOfSections] > 0) {
 			if ([super tableFooterView] != self.storedTableFooterView) {
 				[super setTableFooterView:self.storedTableFooterView];
@@ -140,175 +350,10 @@ static UITableViewRowAnimation MTExpandableTableViewReloadAnimation = UITableVie
 	[super reloadData];
 }
 
-- (void)cancelDownloadInSection:(NSInteger)section {
-	[self.downloadingSectionsDictionary setObject:[NSNumber numberWithBool:NO] forKey:[NSNumber numberWithInteger:section] ];
-	[self reloadRowsAtIndexPaths:[NSArray arrayWithObject:[NSIndexPath indexPathForRow:0 inSection:section] ] 
-				withRowAnimation:UITableViewRowAnimationNone];
-}
-
-- (void)expandSection:(NSInteger)section animated:(BOOL)animated {
-	NSNumber *key = [NSNumber numberWithInteger:section];
-	if ([[self.showingSectionsDictionary objectForKey:key] boolValue]) {
-		// section is already showing, return
-		return;
-	}
-	
-	[self deselectRowAtIndexPath:[NSIndexPath indexPathForRow:0 inSection:section] animated:NO];
-	
-	if ([self.myDataSource tableView:self needsToDownloadDataForExpandableSection:section]) {
-		// data is still not ready to be displayed, return
-		[self downloadDataInSection:section];
-		return;
-	}
-	
-	[self.animatingSectionsDictionary setObject:[NSNumber numberWithBool:YES] forKey:key];
-	
-	// remove the download state
-	[self.downloadingSectionsDictionary setObject:[NSNumber numberWithBool:NO] forKey:key];
-	
-	// update the showing state
-	[self.showingSectionsDictionary setObject:[NSNumber numberWithBool:YES] forKey:key];
-	
-	NSInteger newRowCount = [self.myDataSource tableView:self numberOfRowsInSection:section];
-	// now do the animation magic to insert the new cells
-    if ([self.myDelegate respondsToSelector:@selector(tableView:willExpandSection:)])
-		[self.myDelegate tableView:self willExpandSection:section];
-
-	if (animated && newRowCount <= self.maximumRowCountToStillUseAnimationWhileExpanding) {
-		[self beginUpdates];
-		
-		UITableViewCell<MTExpandingTableViewCell> *cell = (UITableViewCell<MTExpandingTableViewCell> *)[self cellForRowAtIndexPath:[NSIndexPath indexPathForRow:0 inSection:section]];
-		[cell setExpansionStyle:MTExpansionStyleExpanded animated:YES];
-		
-		NSMutableArray *insertArray = [NSMutableArray array];
-		for (int i = 1; i < newRowCount; i++) {
-			[insertArray addObject:[NSIndexPath indexPathForRow:i inSection:section] ];
-		}
-		
-		[self insertRowsAtIndexPaths:insertArray withRowAnimation:MTExpandableTableViewReloadAnimation];
-		
-		[self endUpdates];
-	} else {
-		[self reloadDataAndResetExpansionStates:NO];
-	}
-	
-	[self.animatingSectionsDictionary removeObjectForKey:[NSNumber numberWithInt:section]];
-	
-	[self scrollToRowAtIndexPath:[NSIndexPath indexPathForRow:0 inSection:section] 
-				atScrollPosition:UITableViewScrollPositionTop 
-						animated:animated];
-	
-	// inform that we did scroll
-	void(^animationBlock)(void) = ^(void) {
-		[self scrollViewDidScroll:self];
-	};
-	
-	if (animated) {
-		[UIView animateWithDuration:self.animationDuration animations:animationBlock completion:^(BOOL finished) {
-            if ([self.myDelegate respondsToSelector:@selector(tableView:didExpandSection:)])
-                [self.myDelegate tableView:self didExpandSection:section];
-        }];
-	} else {
-		animationBlock();
-        if ([self.myDelegate respondsToSelector:@selector(tableView:didExpandSection:)])
-            [self.myDelegate tableView:self didExpandSection:section];
-	}
-}
-
-- (void)collapseSection:(NSInteger)section animated:(BOOL)animated {
-	NSNumber *key = [NSNumber numberWithInteger:section];
-	if (![[self.showingSectionsDictionary objectForKey:key] boolValue]) {
-		// section is not showing, return
-		return;
-	}
-	
-	[self deselectRowAtIndexPath:[NSIndexPath indexPathForRow:0 inSection:section] animated:NO];
-	
-	[self.animatingSectionsDictionary setObject:[NSNumber numberWithBool:YES] forKey:key];
-	
-	// update the showing state
-	[self.showingSectionsDictionary setObject:[NSNumber numberWithBool:NO] forKey:key];
-	
-	NSInteger newRowCount = [self.myDataSource tableView:self numberOfRowsInSection:section];
-	// now do the animation magic to delete the new cells
-    if ([self.myDelegate respondsToSelector:@selector(tableView:willCollapseSection:)])
-        [self.myDelegate tableView:self willCollapseSection:section];
-	if (animated && newRowCount <= self.maximumRowCountToStillUseAnimationWhileExpanding) {
-		[self beginUpdates];
-		
-		UITableViewCell<MTExpandingTableViewCell> *cell = (UITableViewCell<MTExpandingTableViewCell> *)[self cellForRowAtIndexPath:[NSIndexPath indexPathForRow:0 inSection:section]];
-		[cell setExpansionStyle:MTExpansionStyleCollapsed animated:YES];
-		
-		NSMutableArray *deleteArray = [NSMutableArray array];
-		for (int i = 1; i < newRowCount; i++) {
-			[deleteArray addObject:[NSIndexPath indexPathForRow:i inSection:section] ];
-		}
-		
-		[self deleteRowsAtIndexPaths:deleteArray withRowAnimation:MTExpandableTableViewReloadAnimation];
-		
-		[self endUpdates];
-	} else {
-		[self reloadDataAndResetExpansionStates:NO];
-	}
-	
-	[self.animatingSectionsDictionary removeObjectForKey:[NSNumber numberWithInt:section]];
-	
-	[self scrollToRowAtIndexPath:[NSIndexPath indexPathForRow:0 inSection:section] 
-				atScrollPosition:UITableViewScrollPositionTop 
-						animated:animated];
-	
-	// inform that we did scroll
-	void(^animationBlock)(void) = ^(void) {
-		[self scrollViewDidScroll:self];
-	};
-	
-	if (animated) {
-		[UIView animateWithDuration:self.animationDuration animations:animationBlock completion:^(BOOL finished) {
-            if ([self.myDelegate respondsToSelector:@selector(tableView:didCollapseSection:)])
-                [self.myDelegate tableView:self didCollapseSection:section];
-        }];
-	} else {
-		animationBlock();
-        if ([self.myDelegate respondsToSelector:@selector(tableView:didCollapseSection:)])
-            [self.myDelegate tableView:self didCollapseSection:section];
-	}
-}
-
-- (void)toggleSection:(NSInteger)section {
-    NSNumber *key = [NSNumber numberWithInteger:section];
-	if ([[self.expandableSectionsDictionary objectForKey:key] boolValue]) {
-    // section is expandable
-        // expand cell got clicked
-        if ([self.myDataSource tableView:self needsToDownloadDataForExpandableSection:section]) {
-            // we need to download some data first
-            [self downloadDataInSection:section];
-        } else {
-            if ([[self.showingSectionsDictionary objectForKey:key] boolValue]) {
-                [self collapseSection:section animated:YES];
-            } else {
-                [self expandSection:section animated:YES];
-            }
-        }
-    }
-}
-
-- (BOOL)isSectionExpanded:(NSInteger)section {
-	NSNumber *key = [NSNumber numberWithInteger:section];
-	return [[self.showingSectionsDictionary objectForKey:key] boolValue];
-}
-
-#pragma mark - super implementation
-
-- (void)reloadData {
-	[self reloadDataAndResetExpansionStates:YES];
-}
-
 #pragma mark - UITableViewDelegate
 
 - (void)tableView:(UITableView *)tableView willDisplayCell:(UITableViewCell *)cell forRowAtIndexPath:(NSIndexPath *)indexPath {
-	NSNumber *key = [NSNumber numberWithInt:indexPath.section];
-	NSNumber *value = [self.animatingSectionsDictionary objectForKey:key];
-	if ([value boolValue]) {
+	if ([self isSectionAnimating:indexPath.section]) {
 		if ([self.myDelegate respondsToSelector:@selector(tableView:willDisplayCell:forRowAtIndexPathWhileAnimatingSection:)]) {
 			[self.myDelegate tableView:self willDisplayCell:cell forRowAtIndexPathWhileAnimatingSection:indexPath];
 		}
@@ -471,39 +516,39 @@ static UITableViewRowAnimation MTExpandableTableViewReloadAnimation = UITableVie
 #pragma mark - UITableViewDataSource
 
 - (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section {
-	NSNumber *key = [NSNumber numberWithInteger:section];
+    NSInteger rows = 0;
 	if ([self.myDataSource tableView:self canExpandSection:section]) {
 		if ([self.myDataSource tableView:tableView numberOfRowsInSection:section] == 0) {
-			return 0;
-		}
-		[self.expandableSectionsDictionary setObject:[NSNumber numberWithBool:YES] forKey:key ];
-		
-		if ([[self.showingSectionsDictionary objectForKey:key] boolValue]) {
-			return [self.myDataSource tableView:tableView numberOfRowsInSection:section];
+			rows = 0;
 		} else {
-			return 1;
-		}
+            [self setSection:section expandable:YES];
+            
+            if ([self isSectionExpanded:section]) {
+                rows = [self.myDataSource tableView:tableView numberOfRowsInSection:section];
+            } else {
+                rows = 1;
+            }
+        }
 	} else {
-		[self.expandableSectionsDictionary setObject:[NSNumber numberWithBool:NO] forKey:key ];
+		[self setSection:section expandable:NO];
 		// expanding is not supported
-		return [self.myDataSource tableView:tableView numberOfRowsInSection:section];
+		rows = [self.myDataSource tableView:tableView numberOfRowsInSection:section];
 	}
-	return 0;
+	return rows;
 }
 
 - (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath {
-	NSNumber *key = [NSNumber numberWithInteger:indexPath.section];
-	if (![[self.expandableSectionsDictionary objectForKey:key] boolValue]) {
+	if (![self canExpandSection:indexPath.section]) {
 		return [self.myDataSource tableView:tableView cellForRowAtIndexPath:indexPath];
 	} else {
 		// cell is expandable
 		if (indexPath.row == 0) {
 			UITableViewCell<MTExpandingTableViewCell> *cell = [self.myDataSource tableView:self expandingCellForSection:indexPath.section];
-			if ([[self.downloadingSectionsDictionary objectForKey:key] boolValue]) {
+			if ([self isSectionDownloading:indexPath.section]) {
 				[cell setLoading:YES];
 			} else {
 				[cell setLoading:NO];
-				if ([[self.showingSectionsDictionary objectForKey:key] boolValue]) {
+				if ([self isSectionExpanded:indexPath.section]) {
 					[cell setExpansionStyle:MTExpansionStyleExpanded animated:NO];
 				} else {
 					[cell setExpansionStyle:MTExpansionStyleCollapsed animated:NO];
